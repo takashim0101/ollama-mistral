@@ -1,0 +1,95 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-api.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-api.txt
+        pip install pytest pytest-asyncio httpx
+
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        flake8 api_server.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 api_server.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+    - name: Build Docker images
+      run: |
+        docker build -f Dockerfile -t ollama:latest .
+        docker build -f Dockerfile.api -t ollama-api:latest .
+
+    - name: Run Docker Compose
+      run: |
+        docker compose up -d --wait
+        sleep 10
+
+    - name: Check container health
+      run: |
+        docker compose ps
+        docker ps --format "table {{.Names}}\t{{.Status}}"
+
+    - name: Test API endpoints
+      run: |
+        pip install httpx
+        python -c "
+        import httpx
+        import time
+        
+        # Wait for API to be ready
+        for i in range(30):
+            try:
+                response = httpx.get('http://localhost:8000/health')
+                if response.status_code == 200:
+                    print('✓ API health check passed')
+                    break
+            except:
+                time.sleep(1)
+        
+        # Test /
+        response = httpx.get('http://localhost:8000/')
+        assert response.status_code == 200
+        print('✓ GET / passed')
+        
+        # Test /models
+        response = httpx.get('http://localhost:8000/models')
+        assert response.status_code in [200, 503]
+        print('✓ GET /models passed')
+        "
+
+    - name: Clean up
+      if: always()
+      run: docker compose down
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: test-results/
+      continue-on-error: true
