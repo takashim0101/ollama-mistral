@@ -1,41 +1,41 @@
 # GitHub Actions CI/CD Setup Guide
 
-## CI/CD パイプライン
+## CI/CD Pipeline
 
 ### 1. CI - Build and Test (`ci.yml`)
-- コミット/PR 時に実行
-- Python 依存関係のインストール
-- Linting（flake8）
-- Docker イメージのビルド
-- Docker Compose で起動
-- API エンドポイントのテスト
+- Runs on commit/PR
+- Installs Python dependencies
+- Linting (flake8)
+- Builds Docker image
+- Starts with Docker Compose
+- Tests API endpoints
 
-**トリガー:**
-- `main` ブランチへの push
-- `develop` ブランチへの push
-- PR 作成
+**Triggers:**
+- Push to `main` branch
+- Push to `develop` branch
+- PR creation
 
 ### 2. CD - Build and Push (`cd.yml`)
-- Docker イメージをビルド
-- GitHub Container Registry（ghcr.io）へプッシュ
-- Docker Hub へもプッシュ（オプション）
+- Builds Docker image
+- Pushes to GitHub Container Registry (ghcr.io)
+- Pushes to Docker Hub (optional)
 
-**トリガー:**
-- `main` ブランチへの push
-- タグ作成時（v1.0.0 など）
+**Triggers:**
+- Push to `main` branch
+- On tag creation (e.g., v1.0.0)
 
 ### 3. Deploy - Production (`deploy.yml`)
-- CD 完了後に本番サーバーにデプロイ
-- SSH で本番マシンに接続
-- Docker Compose で起動
-- Slack 通知
+- Deploys to production server after CD completes
+- Connects to production machine via SSH
+- Starts with Docker Compose
+- Sends Slack notification
 
-**トリガー:**
-- CD ワークフロー完了時
+**Triggers:**
+- On completion of CD workflow
 
-## セットアップ手順
+## Setup Steps
 
-### Step 1: GitHub リポジトリを作成
+### Step 1: Create a GitHub Repository
 
 ```bash
 git init
@@ -46,114 +46,114 @@ git commit -m "Initial commit: Ollama + Mistral 7B setup"
 git push -u origin main
 ```
 
-### Step 2: GitHub Secrets を設定
+### Step 2: Configure GitHub Secrets
 
-リポジトリの `Settings → Secrets and variables → Actions` で以下を追加：
+In your repository's `Settings → Secrets and variables → Actions`, add the following:
 
-#### Docker Hub（オプション）
+#### Docker Hub (Optional)
 ```
 DOCKER_USERNAME = your_docker_username
 DOCKER_PASSWORD = your_docker_token
 ```
 
-#### 本番デプロイ用
+#### For Production Deployment
 ```
 DEPLOY_HOST = your-server-ip-or-domain.com
 DEPLOY_USER = deploy_user
-DEPLOY_KEY = (SSH 秘密鍵)
+DEPLOY_KEY = (SSH private key)
 DEPLOY_PATH = /home/deploy_user/ollama-mistral
 ```
 
-#### Slack 通知（オプション）
+#### Slack Notification (Optional)
 ```
 SLACK_WEBHOOK_URL = https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
-### Step 3: SSH キーペアを生成（本番デプロイ用）
+### Step 3: Generate SSH Key Pair (for Production Deployment)
 
 ```bash
 ssh-keygen -t ed25519 -f deploy_key -N ""
 ```
 
-- `deploy_key` — GitHub Secrets に `DEPLOY_KEY` として登録
-- `deploy_key.pub` — 本番サーバーの `~/.ssh/authorized_keys` に追加
+- `deploy_key` — Register as `DEPLOY_KEY` in GitHub Secrets
+- `deploy_key.pub` — Add to `~/.ssh/authorized_keys` on the production server
 
-### Step 4: 本番サーバーの準備
+### Step 4: Prepare the Production Server
 
 ```bash
-# 本番サーバー
+# On the production server
 mkdir -p /home/deploy_user/ollama-mistral
 cd /home/deploy_user/ollama-mistral
 
-# Docker, Docker Compose がインストール済みか確認
+# Check if Docker and Docker Compose are installed
 docker --version
 docker compose --version
 
-# Git リポジトリ初期化
+# Initialize Git repository
 git clone https://github.com/YOUR_USERNAME/ollama-mistral.git .
 cp .env.production .env
 ```
 
-## ワークフロー実行フロー
+## Workflow Execution Flow
 
 ```
-1. コミット push
+1. Commit push
    ↓
-2. GitHub Actions CI 実行
-   - テスト ✓
-   - ビルド ✓
+2. GitHub Actions CI runs
+   - Tests ✓
+   - Build ✓
    ↓
-3. CD ワークフロー実行
-   - Docker イメージをビルド
-   - ghcr.io へプッシュ ✓
+3. CD workflow runs
+   - Builds Docker image
+   - Pushes to ghcr.io ✓
    ↓
-4. Deploy ワークフロー実行
-   - 本番サーバーに SSH 接続
+4. Deploy workflow runs
+   - SSH into production server
    - git pull
-   - docker compose 更新
-   - コンテナ再起動 ✓
+   - docker compose update
+   - Restart containers ✓
    ↓
-5. Slack 通知（デプロイ完了）
+5. Slack notification (deployment complete)
 ```
 
-## GitHub Actions ステータス確認
+## Checking GitHub Actions Status
 
-リポジトリの `Actions` タブで以下が表示されます：
+In your repository's `Actions` tab, you will see:
 
-- ✓ CI パイプラインの実行状況
-- ✓ テスト結果
-- ✓ ビルド状況
-- ✓ デプロイ履歴
+- ✓ CI pipeline execution status
+- ✓ Test results
+- ✓ Build status
+- ✓ Deployment history
 
-## トラブルシューティング
+## Troubleshooting
 
-### CI が失敗する場合
+### If CI fails
 ```bash
-# ローカルでテスト
+# Test locally
 docker compose up -d --wait
 curl http://localhost:8000/health
 ```
 
-### CD が失敗する場合
-- Secrets が正しく設定されているか確認
-- Docker Hub クレデンシャルが正しいか確認
+### If CD fails
+- Check if Secrets are configured correctly
+- Check if Docker Hub credentials are correct
 
-### Deploy が失敗する場合
-- SSH キーが正しく設定されているか確認
-- 本番サーバーが起動しているか確認
-- `DEPLOY_PATH` が存在するか確認
+### If Deploy fails
+- Check if SSH key is configured correctly
+- Check if the production server is running
+- Check if `DEPLOY_PATH` exists
 
-## 本番環境チェックリスト
+## Production Environment Checklist
 
-- [ ] SSH キーペアを生成
-- [ ] GitHub Secrets を設定
-- [ ] 本番サーバーに SSH アクセス確認
-- [ ] Docker Compose が本番にインストール済み
-- [ ] `.env.production` を本番サーバーにコピー
-- [ ] ファイアウォール設定（ポート公開）
+- [ ] Generate SSH key pair
+- [ ] Configure GitHub Secrets
+- [ ] Confirm SSH access to the production server
+- [ ] Docker Compose is installed on production
+- [ ] Copy `.env.production` to the production server
+- [ ] Configure firewall (port exposure)
 
-## 参考
+## References
 
-- [GitHub Actions ドキュメント](https://docs.github.com/ja/actions)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Docker setup-buildx-action](https://github.com/docker/setup-buildx-action)
-- [GitHub Container Registry](https://docs.github.com/ja/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
