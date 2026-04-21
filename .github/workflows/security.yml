@@ -18,6 +18,9 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetch all history for accurate TruffleHog results
+
 
     - name: Run Trivy scan on Dockerfile
       uses: aquasecurity/trivy-action@master
