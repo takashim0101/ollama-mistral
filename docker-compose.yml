@@ -1,0 +1,64 @@
+services:
+  ollama:
+    build: .
+    container_name: ollama-mistral
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+      - OLLAMA_HOST=${OLLAMA_HOST}:${OLLAMA_PORT}
+    ports:
+      - "${OLLAMA_PORT}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - ollama-network
+
+  web-ui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: ollama-webui
+    ports:
+      - "${WEBUI_PORT}:8080"
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434/api
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    volumes:
+      - webui_data:/app/backend/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - ollama-network
+
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ollama-api
+    ports:
+      - "${API_PORT}:8000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - APP_ENV=${APP_ENV}
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - ollama-network
+
+volumes:
+  ollama_data:
+    driver: local
+  webui_data:
+    driver: local
+
+networks:
+  ollama-network:
+    driver: bridge
