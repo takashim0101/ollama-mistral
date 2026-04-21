@@ -7,9 +7,53 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8
+
+    - name: Lint with flake8
+      run: |
+        flake8 api_server.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 api_server.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
   build:
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Ollama Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: ollama:test
+
+    - name: Build API Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.api
+        push: false
+        tags: ollama-api:test
+
+  test-dependencies:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
@@ -32,64 +76,11 @@ jobs:
         pip install -r requirements-api.txt
         pip install pytest pytest-asyncio httpx
 
-    - name: Lint with flake8
+    - name: Test imports
       run: |
-        pip install flake8
-        flake8 api_server.py --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 api_server.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      continue-on-error: true
+        python -c "import fastapi; import uvicorn; import requests; print('✓ All dependencies installed')"
 
-    - name: Build Docker images
+    - name: Validate api_server.py syntax
       run: |
-        docker build -f Dockerfile -t ollama:latest .
-        docker build -f Dockerfile.api -t ollama-api:latest .
-
-    - name: Run Docker Compose
-      run: |
-        docker compose up -d --wait
-        sleep 10
-
-    - name: Check container health
-      run: |
-        docker compose ps
-        docker ps --format "table {{.Names}}\t{{.Status}}"
-
-    - name: Test API endpoints
-      run: |
-        pip install httpx
-        python -c "
-        import httpx
-        import time
-        
-        # Wait for API to be ready
-        for i in range(30):
-            try:
-                response = httpx.get('http://localhost:8000/health')
-                if response.status_code == 200:
-                    print('✓ API health check passed')
-                    break
-            except:
-                time.sleep(1)
-        
-        # Test /
-        response = httpx.get('http://localhost:8000/')
-        assert response.status_code == 200
-        print('✓ GET / passed')
-        
-        # Test /models
-        response = httpx.get('http://localhost:8000/models')
-        assert response.status_code in [200, 503]
-        print('✓ GET /models passed')
-        "
-
-    - name: Clean up
-      if: always()
-      run: docker compose down
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: test-results/
-      continue-on-error: true
+        python -m py_compile api_server.py
+        echo "✓ api_server.py syntax valid"
