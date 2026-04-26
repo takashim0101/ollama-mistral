@@ -1,5 +1,7 @@
 """
 Pytest configuration and fixtures for Ollama API Server tests.
+
+License: CC BY-NC-SA 4.0
 """
 
 import os

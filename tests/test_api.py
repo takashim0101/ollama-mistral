@@ -1,4 +1,5 @@
 # tests/test_api.py
+# License: CC BY-NC-SA 4.0
 import pytest
 import requests
 from httpx import AsyncClient, ASGITransport

@@ -1,4 +1,5 @@
 # Security Scanning Guide
+# License: CC BY-NC-SA 4.0
 
 This document provides detailed information about the automated security scanning integrated into the CI/CD pipeline.
 

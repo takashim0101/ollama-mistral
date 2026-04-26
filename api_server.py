@@ -7,7 +7,7 @@ logging, configuration management, caching, and monitoring.
 
 Author: Takashim0101
 Version: 1.1.0
-License: MIT
+License: CC BY-NC-SA 4.0
 """
 
 from fastapi import FastAPI, HTTPException

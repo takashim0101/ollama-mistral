@@ -1,4 +1,5 @@
 # DevSecOps Policy
+# License: CC BY-NC-SA 4.0
 
 This document outlines the security practices and policies for the Ollama Mistral 7B project.
 

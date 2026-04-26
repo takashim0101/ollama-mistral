@@ -1,4 +1,5 @@
 # API Enhancements - v1.1.0
+# License: CC BY-NC-SA 4.0
 
 This document describes the new production-grade features added to Ollama Mistral 7B API Server.
 

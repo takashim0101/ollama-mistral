@@ -1,4 +1,5 @@
 # Project Overview
+# License: CC BY-NC-SA 4.0
 
 ## Motivation
 
