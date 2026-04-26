@@ -1,4 +1,5 @@
 # Branch Protection Rules Configuration
+# License: CC BY-NC-SA 4.0
 
 To set up branch protection and ensure professional code quality, follow these steps:
 

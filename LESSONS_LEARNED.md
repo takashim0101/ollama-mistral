@@ -1,4 +1,5 @@
 # Lessons Learned
+# License: CC BY-NC-SA 4.0
 
 This document captures technical insights and lessons learned during the development of Ollama Mistral 7B stack.
 

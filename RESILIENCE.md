@@ -1,4 +1,5 @@
 # Resilience & Error Handling Strategy
+# License: CC BY-NC-SA 4.0
 
 This document outlines how the Ollama Mistral 7B system handles errors, failures, and recovery scenarios.
 

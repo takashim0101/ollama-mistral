@@ -1,4 +1,5 @@
 # Git Workflow Guide
+# License: CC BY-NC-SA 4.0
 
 ## Branch Strategy (Git Flow)
 
