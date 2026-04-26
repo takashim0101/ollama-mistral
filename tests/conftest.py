@@ -1,15 +1,5 @@
 """
 Pytest configuration and fixtures for Ollama API Server tests.
-
-This module provides:
-    - pytest fixtures for testing
-    - Custom markers for test organization
-    - Ollama service availability detection
-    - Automatic test skipping when Ollama is unavailable
-
-Test Categories:
-    - unit: Tests API endpoints with mocked responses
-    - integration: Tests actual Ollama service (requires running Ollama)
 """
 
 import os
@@ -27,14 +17,7 @@ sys.path.insert(0, os.path.abspath(
 
 
 def pytest_configure(config):
-    """Register custom pytest markers.
-
-    This hook is called after command line options have been parsed
-    and all plugins and initial conftest files been loaded.
-
-    Args:
-        config: pytest Config object
-    """
+    """Register custom pytest markers."""
     config.addinivalue_line(
         "markers",
         "integration: mark test as integration test requiring Ollama service"
@@ -42,14 +25,7 @@ def pytest_configure(config):
 
 
 def ollama_available() -> bool:
-    """Check if Ollama service is running and accessible.
-
-    Attempts a simple HTTP request to the Ollama API tags endpoint
-    to verify service availability.
-
-    Returns:
-        bool: True if Ollama is accessible, False otherwise
-    """
+    """Check if Ollama service is running and accessible."""
     try:
         response = requests.get(
             'http://localhost:11434/api/tags',
@@ -62,33 +38,12 @@ def ollama_available() -> bool:
 
 @pytest.fixture(scope="session")
 def check_ollama() -> bool:
-    """Fixture to check Ollama availability at session start.
-
-    This fixture runs once per test session and provides Ollama
-    availability status to test functions that need it.
-
-    Returns:
-        bool: True if Ollama is available, False otherwise
-
-    Example:
-        >>> def test_something(check_ollama):
-        >>>     if check_ollama:
-        >>>         # Ollama is available
-        >>>         pass
-    """
+    """Fixture to check Ollama availability at session start."""
     return ollama_available()
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip integration tests if Ollama service is unavailable.
-
-    This hook is called after test collection is performed. It automatically
-    marks integration tests with skip if Ollama is not running.
-
-    Args:
-        config: pytest Config object
-        items: list of collected test items
-    """
+    """Skip integration tests if Ollama service is unavailable."""
     if not ollama_available():
         skip_ollama = pytest.mark.skip(
             reason="Ollama service not available"

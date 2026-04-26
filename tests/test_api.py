@@ -40,7 +40,9 @@ async def test_list_models_ollama_unavailable(mock_requests_get):
 async def test_generate_ollama_connection_error(mock_async_client_class):
     """Test POST /generate when Ollama connection fails."""
     mock_instance = AsyncMock()
-    mock_async_client_class.return_value.__aenter__.return_value = mock_instance
+    # Breaking the long line for flake8
+    mock_enter = mock_async_client_class.return_value.__aenter__
+    mock_enter.return_value = mock_instance
     mock_instance.post.side_effect = httpx.ConnectError("Connection refused")
 
     transport = ASGITransport(app=app)

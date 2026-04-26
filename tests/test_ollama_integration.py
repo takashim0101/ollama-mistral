@@ -1,12 +1,15 @@
 import pytest
 import requests
-import json
 
+
+# Set markers for this test file
 pytestmark = pytest.mark.integration
+
 
 def test_ollama_generate():
     """Integration test: Test Ollama text generation endpoint directly"""
-    response = requests.post('http://localhost:11434/api/generate', 
+    response = requests.post(
+        'http://localhost:11434/api/generate',
         json={
             'model': 'mistral',
             'prompt': 'Hello!',
