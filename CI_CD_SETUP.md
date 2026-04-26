@@ -205,9 +205,64 @@ This allows you to:
 - Track specific commits with SHA tags
 - Use version tags (v1.0.0)
 
+## Production Deployment Approval
+
+### Deployment with Approval Gate
+
+Production deployments require manual approval via GitHub Environments:
+
+```bash
+# Trigger production deployment
+gh workflow run deploy.yml \
+  -f environment=production \
+  -f version=v1.0.0
+```
+
+The workflow will:
+1. **Pre-deployment checks** - Verify all tests pass and security scans are clean
+2. **Request approval** - GitHub notifies reviewers
+3. **Await approval** - Blocks until manually approved
+4. **Deploy** - Pushes image and deploys to production
+5. **Verify** - Runs health checks
+
+### Staging Deployment (Automatic)
+
+Staging deployments require no approval:
+
+```bash
+gh workflow run deploy.yml \
+  -f environment=staging \
+  -f version=main
+```
+
+Deploys immediately after pre-deployment checks pass.
+
+### Environment Configuration
+
+Configure approval reviewers in GitHub:
+
+1. Go to **Settings → Environments → production-approval**
+2. Under "Deployment branches", select which branches can deploy
+3. Under "Deployment protection rules**, add required reviewers
+4. Set timeout (default: 30 days)
+
+## Security Integration
+
+The deployment workflow integrates with security scanning:
+
+- ✓ Fails if dependency vulnerabilities found (Safety + pip-audit)
+- ✓ Fails if container vulnerabilities found (Trivy)
+- ✓ Fails if secrets detected in codebase (TruffleHog)
+- ✓ Fails if code security issues found (Bandit)
+- ✓ Requires signed commits (recommended)
+
+All security scans must pass before approval is even requested.
+
 ## References
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
 - [Docker setup-buildx-action](https://github.com/docker/setup-buildx-action)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [Docker Hub](https://docs.docker.com/docker-hub/)
+- [DEVSECOPS.md](./DEVSECOPS.md) - Detailed security policy
