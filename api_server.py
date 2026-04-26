@@ -50,7 +50,7 @@ APP_ENV = os.getenv('APP_ENV', 'development')
 
 class GenerateRequest(BaseModel):
     """Request model for text generation endpoint.
-    
+
     Attributes:
         prompt: Input text prompt for the model to generate from
         stream: Whether to stream the response (default: False)
@@ -63,7 +63,7 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     """Response model for text generation endpoint.
-    
+
     Attributes:
         response: Generated text from the model
         model: Name of the model used for generation
@@ -80,16 +80,16 @@ OLLAMA_GENERATE_TIMEOUT = int(os.getenv('OLLAMA_GENERATE_TIMEOUT', 600))
 @app.get("/health")
 async def health_check() -> dict:
     """Health check endpoint to verify Ollama service availability.
-    
+
     This endpoint verifies that the Ollama service is running and accessible.
     Used by orchestration systems to determine service health.
-    
+
     Returns:
         dict: Health status including environment and model information
-        
+
     Raises:
         HTTPException: 503 Service Unavailable if Ollama cannot be reached
-        
+
     Example:
         >>> GET /health
         >>> {
@@ -122,22 +122,23 @@ async def health_check() -> dict:
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(request: GenerateRequest) -> GenerateResponse:
     """Generate text using Ollama Mistral 7B model.
-    
-    This endpoint accepts a text prompt and returns generated text from the model.
-    Supports configurable generation parameters including maximum token count.
-    
+
+    This endpoint accepts a text prompt and returns generated text
+    from the model. Supports configurable generation parameters
+    including maximum token count.
+
     Args:
-        request: GenerateRequest containing prompt and generation parameters
-        
+        request: GenerateRequest containing prompt and parameters
+
     Returns:
         GenerateResponse: Generated text and model name
-        
+
     Raises:
         HTTPException: 503 if Ollama service is unreachable
         HTTPException: 504 if generation request times out
         HTTPException: 500 if Ollama returns an error response
         HTTPException: 422 if request validation fails
-        
+
     Example:
         >>> POST /generate
         >>> {"prompt": "What is Docker?", "max_tokens": 100}
@@ -147,18 +148,20 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
         >>> }
     """
     try:
-        logger.info(f"Generating response for prompt: {request.prompt[:50]}...")
-        
+        prompt_log = request.prompt[:40]
+        logger.info(f"Generating response for prompt: {prompt_log}...")
+
         # Construct payload with Ollama API requirements
+        # Map max_tokens to Ollama's num_predict
         ollama_payload = {
             "model": OLLAMA_MODEL,
             "prompt": request.prompt,
             "stream": False,
             "options": {
-                "num_predict": request.max_tokens  # Map max_tokens to Ollama's num_predict
+                "num_predict": request.max_tokens
             }
         }
-        
+
         # Send async request to Ollama inference endpoint
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -166,32 +169,32 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
                 json=ollama_payload,
                 timeout=OLLAMA_GENERATE_TIMEOUT
             )
-            
+
             # Handle non-200 responses from Ollama
             if response.status_code != 200:
                 logger.error(
                     f"Ollama returned non-200 status: "
                     f"{response.status_code} - {response.text}"
                 )
-                # Parse error message from JSON response or fallback to raw text
+                # Parse error message from JSON or fallback to text
                 try:
                     error_data = json.loads(response.text)
                     error_msg = error_data.get('error', response.text)
-                except:
+                except Exception:
                     error_msg = response.text
                 raise HTTPException(
                     status_code=500,
                     detail=f"Ollama Error: {error_msg}"
                 )
-                
+
             # Extract generated text from response
             data = response.json()
-            
+
             return GenerateResponse(
                 response=data.get('response', ''),
                 model=OLLAMA_MODEL
             )
-            
+
     except httpx.ConnectError:
         logger.error(f"Cannot connect to Ollama at {OLLAMA_HOST}")
         raise HTTPException(
@@ -219,21 +222,22 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
 @app.get("/models")
 async def list_models() -> dict:
     """List available models in Ollama.
-    
-    Retrieves the list of models currently available in the Ollama instance.
-    
+
+    Retrieves the list of models currently available in the
+    Ollama instance.
+
     Returns:
         dict: Response from Ollama containing available models
-        
+
     Raises:
         HTTPException: 503 Service Unavailable if Ollama cannot be reached
-        
+
     Example:
         >>> GET /models
         >>> {
         >>>     "models": [
-        >>>         {"name": "mistral:latest", "size": "4.4GB", ...},
-        >>>         {"name": "llama2:latest", "size": "3.8GB", ...}
+        >>>         {"name": "mistral:latest", "size": "4.4GB"},
+        >>>         {"name": "llama2:latest", "size": "3.8GB"}
         >>>     ]
         >>> }
     """
@@ -255,13 +259,13 @@ async def list_models() -> dict:
 @app.get("/")
 async def root() -> dict:
     """Root endpoint returning service information.
-    
+
     Provides an overview of available endpoints and service configuration.
     Useful for API clients to discover available endpoints.
-    
+
     Returns:
-        dict: Service information including version, environment, and endpoint list
-        
+        dict: Service info including version, environment, endpoints
+
     Example:
         >>> GET /
         >>> {
@@ -291,10 +295,10 @@ async def root() -> dict:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     # Load server configuration from environment variables
     API_HOST = os.getenv('API_HOST', '0.0.0.0')
     API_PORT = int(os.getenv('API_PORT', 8000))
-    
+
     # Start Uvicorn ASGI server
     uvicorn.run(app, host=API_HOST, port=API_PORT)
