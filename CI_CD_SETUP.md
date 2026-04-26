@@ -132,7 +132,7 @@ If you want to skip integration tests in CI (recommended for faster builds), upd
 4. Deploy workflow runs
    - SSH into production server
    - git pull
-   - docker compose update
+   - docker compose pull && docker compose up -d
    - Restart containers ✓
    ↓
 5. Slack notification (deployment complete)
@@ -266,3 +266,4 @@ All security scans must pass before approval is even requested.
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [Docker Hub](https://docs.docker.com/docker-hub/)
 - [DEVSECOPS.md](./DEVSECOPS.md) - Detailed security policy
+

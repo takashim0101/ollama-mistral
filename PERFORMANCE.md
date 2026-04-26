@@ -219,7 +219,7 @@ Auto-skip: Yes (when Ollama unavailable)
 
 ### ROI Calculation
 
-**Break-even point**: ~8-12 months with moderate usage
+**Break-even point: ~5-6 months with moderate usage
 
 ```
 One-time cost: $1500
@@ -318,3 +318,4 @@ Last updated: 2026-04-26
 Version: 1.0.0
 
 **Note**: Benchmarks are representative and may vary based on hardware, OS, and network conditions. For production use, conduct benchmarks on target hardware.
+
