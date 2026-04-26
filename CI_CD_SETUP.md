@@ -6,6 +6,7 @@
 - Runs on commit/PR
 - Installs Python dependencies
 - Linting (flake8)
+- Runs pytest (unit tests + integration tests)
 - Builds Docker image
 - Starts with Docker Compose
 - Tests API endpoints
@@ -94,13 +95,34 @@ git clone https://github.com/YOUR_USERNAME/ollama-mistral.git .
 cp .env.production .env
 ```
 
+## Testing in CI/CD
+
+The CI pipeline automatically runs all tests:
+
+```bash
+pytest -v
+```
+
+This includes:
+- **11 unit tests** from `tests/test_api.py` — Always run, use mocking
+- **1 integration test** from `tests/test_ollama_integration.py` — Skipped if Ollama unavailable
+
+If you want to skip integration tests in CI (recommended for faster builds), update your CI workflow:
+
+```yaml
+- name: Run tests
+  run: pytest tests/test_api.py -v
+```
+
 ## Workflow Execution Flow
 
 ```
 1. Commit push
    ↓
 2. GitHub Actions CI runs
-   - Tests ✓
+   - Installs dependencies
+   - Runs linting (flake8)
+   - Runs pytest (unit + integration tests)
    - Build ✓
    ↓
 3. CD workflow runs
@@ -130,18 +152,27 @@ In your repository's `Actions` tab, you will see:
 ### If CI fails
 ```bash
 # Test locally
-docker compose up -d --wait
-curl http://localhost:8000/health
+python -m venv venv
+source venv/bin/activate  # or .\venv\Scripts\Activate.ps1 on Windows
+pip install -r requirements-api.txt
+pytest -v
 ```
+
+### If tests timeout
+- Unit tests should complete in <10s
+- Integration tests may timeout if Ollama isn't running
+- Check that Ollama container is healthy in the CI environment
 
 ### If CD fails
 - Check if Secrets are configured correctly
 - Check if Docker Hub credentials are correct
+- Verify Docker image builds locally: `docker build -f Dockerfile.api -t ollama-api .`
 
 ### If Deploy fails
 - Check if SSH key is configured correctly
 - Check if the production server is running
-- Check if `DEPLOY_PATH` exists
+- Check if `DEPLOY_PATH` exists and is accessible
+- Verify SSH connectivity: `ssh -i deploy_key deploy_user@DEPLOY_HOST`
 
 ## Production Environment Checklist
 
@@ -151,9 +182,32 @@ curl http://localhost:8000/health
 - [ ] Docker Compose is installed on production
 - [ ] Copy `.env.production` to the production server
 - [ ] Configure firewall (port exposure)
+- [ ] Verify Docker Hub credentials (if pushing there)
+- [ ] Test CI/CD pipeline with a dummy commit
+
+## Docker Image Versioning
+
+For better image management, tag your builds:
+
+```yaml
+# In cd.yml workflow
+- name: Build and push
+  uses: docker/build-push-action@v5
+  with:
+    tags: |
+      docker.io/YOUR_USERNAME/ollama-api:latest
+      docker.io/YOUR_USERNAME/ollama-api:${{ github.sha }}
+      docker.io/YOUR_USERNAME/ollama-api:${{ github.ref_name }}
+```
+
+This allows you to:
+- Always have a `latest` tag
+- Track specific commits with SHA tags
+- Use version tags (v1.0.0)
 
 ## References
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Docker setup-buildx-action](https://github.com/docker/setup-buildx-action)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+- [Docker Hub](https://docs.docker.com/docker-hub/)

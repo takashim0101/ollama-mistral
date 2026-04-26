@@ -26,7 +26,6 @@ jobs:
       run: |
         flake8 api_server.py --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 api_server.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      continue-on-error: true
 
   build:
     runs-on: ubuntu-latest
@@ -52,35 +51,44 @@ jobs:
         push: false
         tags: ollama-api:test
 
-  test-dependencies:
+  test:
     runs-on: ubuntu-latest
+    needs: [build, lint] # Ensure build and lint pass before testing
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and run services
+      run: |
+        docker compose -f docker-compose.yml up -d --build ollama api-server
+        docker compose -f docker-compose.yml ps
+
+    - name: Wait for API server to be healthy
+      run: |
+        # Wait for the API server to be ready
+        for i in $(seq 1 30); do
+          if curl --fail http://localhost:8000/health; then
+            echo "API server is healthy."
+            break
+          fi
+          echo "Waiting for API server... ($i/30)"
+          sleep 5
+        done
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-api.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
-    - name: Install dependencies
+    - name: Install test dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements-api.txt
-        pip install pytest pytest-asyncio httpx
+        pip install -r requirements-api.txt # Install all dependencies including pytest
 
-    - name: Test imports
+    - name: Run pytest tests
       run: |
-        python -c "import fastapi; import uvicorn; import requests; print('✓ All dependencies installed')"
+        pytest tests/
 
-    - name: Validate api_server.py syntax
-      run: |
-        python -m py_compile api_server.py
-        echo "✓ api_server.py syntax valid"
+

@@ -4,10 +4,12 @@ import requests
 import os
 from dotenv import load_dotenv
 import logging
+import httpx
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(level=getattr(logging, LOG_LEVEL))
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -23,16 +25,21 @@ APP_ENV = os.getenv('APP_ENV', 'development')
 class GenerateRequest(BaseModel):
     prompt: str
     stream: bool = False
+    max_tokens: int = 50 # Default to 50 tokens if not provided
 
 class GenerateResponse(BaseModel):
     response: str
     model: str
 
+OLLAMA_HEALTH_TIMEOUT = int(os.getenv('OLLAMA_HEALTH_TIMEOUT', 5))
+
+# ...
+
 @app.get("/health")
 async def health_check():
-    """ヘルスチェック"""
+    """healthcheck"""
     try:
-        response = requests.get(f'{OLLAMA_HOST}/api/tags', timeout=5)
+        response = requests.get(f'{OLLAMA_HOST}/api/tags', timeout=OLLAMA_HEALTH_TIMEOUT)
         response.raise_for_status()
         return {
             "status": "healthy",
@@ -44,10 +51,14 @@ async def health_check():
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Ollama service unavailable")
 
+OLLAMA_GENERATE_TIMEOUT = int(os.getenv('OLLAMA_GENERATE_TIMEOUT', 600))
+
+# ...
+
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(request: GenerateRequest):
     """
-    テキスト生成エンドポイント
+    endpoint of generating text.
     
     Example:
     ```json
@@ -59,38 +70,53 @@ async def generate(request: GenerateRequest):
     try:
         logger.info(f"Generating response for prompt: {request.prompt[:50]}...")
         
-        response = requests.post(
-            f'{OLLAMA_HOST}/api/generate',
-            json={
-                'model': OLLAMA_MODEL,
-                'prompt': request.prompt,
-                'stream': request.stream
-            },
-            timeout=600
-        )
-        response.raise_for_status()
+        # Construct the exact payload Ollama expects
+        ollama_payload = {
+            "model": OLLAMA_MODEL,  # Required by Ollama
+            "prompt": request.prompt,
+            "stream": False,
+            "options": {
+                "num_predict": request.max_tokens  # Mapping your max_tokens to Ollama's setting
+            }
+        }
         
-        result = response.json()
-        
-        return GenerateResponse(
-            response=result.get('response', ''),
-            model=OLLAMA_MODEL
-        )
-    except requests.exceptions.ConnectionError:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f'{OLLAMA_HOST}/api/generate', json=ollama_payload, timeout=OLLAMA_GENERATE_TIMEOUT)
+            
+            # If Ollama still throws an error, this will catch it
+            if response.status_code != 200:
+                logger.error(f"Ollama returned non-200 status: {response.status_code} - {response.text}")
+                try:
+                    import json
+                    error_data = json.loads(response.text)
+                    error_msg = error_data.get('error', response.text)
+                except:
+                    error_msg = response.text
+                raise HTTPException(status_code=500, detail=f"Ollama Error: {error_msg}")
+                
+            data = response.json()
+            
+            return GenerateResponse(
+                response=data.get('response', ''),
+                model=OLLAMA_MODEL
+            )
+    except httpx.ConnectError:
         logger.error(f"Cannot connect to Ollama at {OLLAMA_HOST}")
         raise HTTPException(status_code=503, detail="Ollama service unavailable")
-    except requests.exceptions.Timeout:
+    except httpx.TimeoutException:
         logger.error("Request timeout")
         raise HTTPException(status_code=504, detail="Request timeout - inference took too long")
-    except Exception as e:
+    except HTTPException: # Catch HTTPException specifically and re-raise it
+        raise
+    except Exception as e: # Catch any other unexpected exceptions
         logger.error(f"Generation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/models")
 async def list_models():
-    """利用可能なモデル一覧"""
+    """list of models"""
     try:
-        response = requests.get(f'{OLLAMA_HOST}/api/tags', timeout=5)
+        response = requests.get(f'{OLLAMA_HOST}/api/tags', timeout=OLLAMA_HEALTH_TIMEOUT)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -99,7 +125,7 @@ async def list_models():
 
 @app.get("/")
 async def root():
-    """ルートエンドポイント"""
+    """Route endpoints"""
     return {
         "service": "Ollama API Server",
         "version": "1.0.0",
@@ -114,4 +140,6 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    API_HOST = os.getenv('API_HOST', '0.0.0.0')
+    API_PORT = int(os.getenv('API_PORT', 8000))
+    uvicorn.run(app, host=API_HOST, port=API_PORT)
