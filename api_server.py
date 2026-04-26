@@ -302,3 +302,6 @@ if __name__ == "__main__":
 
     # Start Uvicorn ASGI server
     uvicorn.run(app, host=API_HOST, port=API_PORT)
+    
+    
+    
