@@ -1,0 +1,65 @@
+# Git attributes for secure file handling
+# This file ensures proper line ending and merge handling
+
+# Auto detect text files and normalize line endings to LF
+* text=auto
+
+# Python files
+*.py text eol=lf
+*.pyw text eol=lf
+*.pyx text eol=lf
+*.pyi text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.markdown text eol=lf
+*.txt text eol=lf
+README* text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf
+.env.* text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+Dockerfile* text eol=lf
+
+# Docker files
+docker-compose*.yml text eol=lf
+
+# Binary files
+*.pyc binary
+*.pyo binary
+*.egg-info/ binary
+*.so binary
+*.zip binary
+*.gz binary
+*.tar binary
+
+# Image files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Mark environment files as binary to prevent merges
+.env binary merge=union
+.env.local binary merge=union
+.env.production binary merge=union
+
+# Mark secret files (if accidentally added) as binary
+*.key binary merge=union
+*.pem binary merge=union
+*.p12 binary merge=union
+*.pfx binary merge=union
