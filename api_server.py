@@ -301,5 +301,5 @@ if __name__ == "__main__":
     API_PORT = int(os.getenv('API_PORT', 8000))
 
     # Start Uvicorn ASGI server
-    uvicorn.run(app, host=API_HOST, port=API_PORT) 
-       
+    uvicorn.run(app, host=API_HOST, port=API_PORT)
+
