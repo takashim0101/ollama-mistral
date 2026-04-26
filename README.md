@@ -3,7 +3,7 @@
 [![CI - Build and Test](https://github.com/takashim0101/ollama-mistral/actions/workflows/ci.yml/badge.svg)](https://github.com/takashim0101/ollama-mistral/actions/workflows/ci.yml)
 [![CD - Build and Push to Registry](https://github.com/takashim0101/ollama-mistral/actions/workflows/cd.yml/badge.svg)](https://github.com/takashim0101/ollama-mistral/actions/workflows/cd.yml)
 [![Security Scan](https://github.com/takashim0101/ollama-mistral/actions/workflows/security.yml/badge.svg)](https://github.com/takashim0101/ollama-mistral/actions/workflows/security.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 
@@ -72,6 +72,7 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1  # Windows
 source venv/bin/activate      # Linux/macOS
 pip install -r requirements-api.txt
+pip install -r requirements-dev.txt
 ```
 
 ### 2. Start Services
@@ -213,7 +214,12 @@ To get started, you must create your own environment file by copying the templat
 
 ### Unit Tests
 
-Run unit tests (no Ollama service required):
+First, ensure development dependencies are installed:
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then, run unit tests (no Ollama service required):
 
 ```bash
 pytest tests/test_api.py -v
@@ -232,6 +238,13 @@ pytest tests/test_ollama_integration.py -v
 If Ollama is not available, this test will be automatically skipped.
 
 ### Run All Tests
+
+First, ensure development dependencies are installed:
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then, run all tests:
 
 ```bash
 pytest -v
@@ -284,7 +297,8 @@ This keeps the production image minimal and efficient.
 
 1. **CI** (`.github/workflows/ci.yml`)
    - Runs on: Push to `main` or `develop`, Pull requests
-   - Tests Python dependencies with flake8
+   - Installs Python dependencies from `requirements-api.txt` and `requirements-dev.txt`
+   - Tests Python code quality with flake8
    - Builds Docker images
    - Tests API endpoints (12 tests)
 
@@ -368,7 +382,8 @@ This project implements enterprise-grade security:
 ├── docker-compose.prod.yml      # Production compose
 ├── docker-compose.override.yml  # Local development overrides
 ├── api_server.py                # FastAPI application
-├── requirements-api.txt         # Python dependencies
+├── requirements-api.txt         # Python API dependencies
+├── requirements-dev.txt         # Python development dependencies (for testing, linting, etc.)
 ├── tests/
 │   ├── conftest.py              # pytest configuration & fixtures
 │   ├── test_api.py              # Unit tests (11 tests)
@@ -547,7 +562,7 @@ See `CONTRIBUTING.md` for detailed guidelines and `SECURITY.md` for security req
 
 ## License
 
-MIT License - see LICENSE file for details.
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License - see LICENSE file for details.
 
 ## Support
 
@@ -582,6 +597,7 @@ MIT License - see LICENSE file for details.
 - [x] Branch protection and code review workflow
 
 **Future Roadmap** 📋
+- [ ] Prompt Engineering Enhancement (e.g., task-specific generation, debugging, specialized knowledge)
 - [ ] Support for additional models (Llama 2, Neural Chat)
 - [ ] Multi-GPU support and load balancing
 - [ ] Model quantization optimization for faster inference

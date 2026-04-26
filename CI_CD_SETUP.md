@@ -4,7 +4,7 @@
 
 ### 1. CI - Build and Test (`ci.yml`)
 - Runs on commit/PR
-- Installs Python dependencies
+- Installs Python dependencies from `requirements-api.txt` and `requirements-dev.txt`
 - Linting (flake8)
 - Runs pytest (unit tests + integration tests)
 - Builds Docker image
@@ -155,6 +155,7 @@ In your repository's `Actions` tab, you will see:
 python -m venv venv
 source venv/bin/activate  # or .\venv\Scripts\Activate.ps1 on Windows
 pip install -r requirements-api.txt
+pip install -r requirements-dev.txt
 pytest -v
 ```
 

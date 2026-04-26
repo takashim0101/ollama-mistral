@@ -28,6 +28,7 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1  # Windows
 source venv/bin/activate      # Linux/macOS
 pip install -r requirements-api.txt
+pip install -r requirements-dev.txt
 ```
 
 ### 4. Make Changes
@@ -35,6 +36,13 @@ pip install -r requirements-api.txt
 Follow the coding standards below.
 
 ### 5. Test Locally
+
+First, ensure development dependencies are installed:
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then, run tests:
 
 ```bash
 # Run all tests
@@ -48,6 +56,13 @@ pytest --cov=api_server tests/
 ```
 
 ### 6. Run Linting
+
+First, ensure development dependencies are installed:
+```bash
+pip install -r requirements-dev.txt
+```
+
+Then, run the linter:
 
 ```bash
 flake8 api_server.py --max-line-length=127
@@ -201,7 +216,7 @@ The `main` branch is protected:
    ↓
 3. Push and create PR to develop
    ↓
-4. GitHub Actions runs automatically
+4. GitHub Actions runs automatically (after installing dependencies from requirements-dev.txt)
    ├─ Linting
    ├─ Unit tests
    ├─ Integration tests
