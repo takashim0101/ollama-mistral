@@ -118,7 +118,7 @@ jobs:
         path: ./
         # Dynamically switch comparison target between PR base and previous push commit
         base: ${{ github.event.pull_request.base.sha || github.event.before }}
-        head: ${{ github.event.pull_request.head.sha || github.event.after }}
+        head: ${{ github.event.pull_request.head.sha || github.sha }}
         extra_args: --only-verified
 
   code-quality:
