@@ -5,18 +5,18 @@ services:
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
-      - OLLAMA_HOST=${OLLAMA_HOST}:${OLLAMA_PORT}
+      - OLLAMA_HOST=0.0.0.0
     ports:
       - "127.0.0.1:${OLLAMA_PORT}:11434"
     volumes:
       - ollama_data_prod:/root/.ollama
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      retries: 10
+      start_period: 300s
     networks:
       - ollama-network-prod
     logging:

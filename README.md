@@ -1,5 +1,12 @@
 # Ollama + Mistral 7B Local LLM Stack
 
+[![CI - Build and Test](https://github.com/takashim0101/ollama-mistral/actions/workflows/ci.yml/badge.svg)](https://github.com/takashim0101/ollama-mistral/actions/workflows/ci.yml)
+[![CD - Build and Push to Registry](https://github.com/takashim0101/ollama-mistral/actions/workflows/cd.yml/badge.svg)](https://github.com/takashim0101/ollama-mistral/actions/workflows/cd.yml)
+[![Security Scan](https://github.com/takashim0101/ollama-mistral/actions/workflows/security.yml/badge.svg)](https://github.com/takashim0101/ollama-mistral/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+
 A complete local LLM inference stack with GPU acceleration, Web UI, and REST API. Deploy, scale, and manage AI models entirely on your machine—no cloud dependencies, no API costs.
 
 ## Features
@@ -11,6 +18,8 @@ A complete local LLM inference stack with GPU acceleration, Web UI, and REST API
 - **Production-Ready** - `.env` management, health checks, logging
 - **Fully Private** - Runs completely offline, no data leaves your machine
 - **Cost-Free** - Docker + Ollama + FastAPI = 100% free
+- **Docker Hub Ready** - Pre-built image available at `docker.io/takam0101/ollama-api`
+- **Enterprise Security** - DevSecOps practices with automated scanning
 
 ## Architecture
 
@@ -77,6 +86,35 @@ docker compose up -d
 - **API Docs**: http://localhost:8000/docs
 - **API Base**: http://localhost:8000
 
+## Verification Steps
+
+After starting the services, follow these steps to verify that everything is working as expected:
+
+1.  **Access Web UI:** Open your browser and navigate to `http://localhost:3000`. You should see the Open WebUI chat interface.
+2.  **Access API Docs:** Open your browser and navigate to `http://localhost:8000/docs`. You should see the FastAPI interactive API documentation (Swagger UI).
+3.  **Check API Health:** Run the following `curl` command in your terminal:
+    ```bash
+    curl http://localhost:8000/health
+    ```
+    You should receive a JSON response similar to:
+    ```json
+    {
+      "status": "healthy",
+      "environment": "development",
+      "ollama_host": "ollama",
+      "model": "mistral"
+    }
+    ```
+4.  **Test Text Generation API:** Run the following `curl` command to test the text generation endpoint:
+    ```bash
+    curl -X POST http://localhost:8000/generate \
+      -H "Content-Type: application/json" \
+      -d '{"prompt": "What is Docker?"}'
+    ```
+    You should receive a JSON response containing generated text.
+
+If you encounter any issues, please refer to the `## Troubleshooting` section or open an issue on GitHub.
+
 ## API Usage
 
 ### Health Check
@@ -137,35 +175,108 @@ console.log(data.response);
 
 ## Configuration
 
-### Development
+This project uses environment variables for configuration. A template file, `.env.example`, is provided to show which variables are needed.
 
-Edit `.env`:
-```env
-OLLAMA_HOST=ollama
-OLLAMA_PORT=11434
-OLLAMA_MODEL=mistral
-WEBUI_PORT=3000
-API_PORT=8000
-APP_ENV=development
-```
+To get started, you must create your own environment file by copying the template.
 
-### Production
+1.  **Create Your Configuration File**
 
-Edit `.env.production`:
-```env
-OLLAMA_HOST=ollama
-OLLAMA_PORT=11434
-OLLAMA_MODEL=mistral
-WEBUI_PORT=3000
-API_PORT=8000
-APP_ENV=production
-WEBUI_SECRET_KEY=your-strong-secret-key
-```
+    Copy the `.env.example` file to a new file.
+    *   For local development, name it `.env`:
+        ```bash
+        cp .env.example .env
+        ```
+    *   For a production environment, you should name it `.env.production`:
+        ```bash
+        cp .env.example .env.production
+        ```
 
-Deploy:
+2.  **Edit the Values**
+
+    Open your new `.env` or `.env.production` file and customize the values as needed. For production, it is **critical** to set a strong, random `WEBUI_SECRET_KEY`.
+
+    > **Security Note:** These `.env` files contain sensitive information and are already listed in `.gitignore`. **Never commit them to your repository.**
+
+### Running with Your Configuration
+
+*   **For Development:** Docker Compose will automatically find and use the `.env` file.
+    ```bash
+    docker compose up -d
+    ```
+
+*   **For Production:** You must explicitly specify both the production compose file and your production environment file.
+    ```bash
+    docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+    ```
+
+## Testing
+
+### Unit Tests
+
+Run unit tests (no Ollama service required):
+
 ```bash
-docker compose -f docker-compose.prod.yml up -d
+pytest tests/test_api.py -v
 ```
+
+All 11 unit tests use mocking and can run independently.
+
+### Integration Tests
+
+Run integration tests (requires Ollama service running):
+
+```bash
+pytest tests/test_ollama_integration.py -v
+```
+
+If Ollama is not available, this test will be automatically skipped.
+
+### Run All Tests
+
+```bash
+pytest -v
+```
+
+This runs 12 tests total:
+- 11 unit tests (always runs)
+- 1 integration test (skipped if Ollama unavailable)
+
+## Docker Deployment
+
+### Using Pre-built Image from Docker Hub
+
+The API server image is available on Docker Hub:
+
+```bash
+docker pull docker.io/takam0101/ollama-api:latest
+```
+
+Run the container:
+
+```bash
+docker run -d \
+  -e OLLAMA_HOST=http://ollama:11434 \
+  -p 8000:8000 \
+  --name ollama-api \
+  docker.io/takam0101/ollama-api:latest
+```
+
+### Building Locally
+
+Build the API server image:
+
+```bash
+docker build -f Dockerfile.api -t ollama-api:latest .
+```
+
+The `.dockerignore` file is configured to exclude:
+- Test files (`tests/`, `test_*`)
+- Virtual environment (`venv/`)
+- Cache directories (`__pycache__/`, `.pytest_cache/`)
+- Development files (`.env`, `.git/`, `.gitignore`)
+- Documentation files
+
+This keeps the production image minimal and efficient.
 
 ## CI/CD Pipeline
 
@@ -173,38 +284,74 @@ docker compose -f docker-compose.prod.yml up -d
 
 1. **CI** (`.github/workflows/ci.yml`)
    - Runs on: Push to `main` or `develop`, Pull requests
-   - Tests Python dependencies
-   - Linting (flake8)
+   - Tests Python dependencies with flake8
    - Builds Docker images
-   - Tests API endpoints
+   - Tests API endpoints (12 tests)
 
-2. **CD** (`.github/workflows/cd.yml`)
-   - Builds and pushes Docker images to GitHub Container Registry
+2. **Security** (`.github/workflows/security.yml`)
+   - Dependency scanning: Safety + pip-audit
+   - Container scanning: Trivy (SARIF reports)
+   - Secret detection: TruffleHog
+   - Code security: Bandit
+   - Triggered on every push and PR
+
+3. **CD** (`.github/workflows/cd.yml`)
+   - Builds and pushes Docker images to GitHub Container Registry + Docker Hub
    - Triggered on: Push to `main`, tag creation
 
-3. **Deploy** (`.github/workflows/deploy.yml`)
-   - Deploys to production via SSH
-   - Triggered on: CD completion
-   - Requires: `DEPLOY_KEY`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH` secrets
-
-4. **Security** (`.github/workflows/security.yml`)
-   - Scans for vulnerabilities (Trivy)
-   - Detects secrets (Trufflesecurity)
-   - Checks Python dependencies
-   - Scheduled weekly
+4. **Deploy** (`.github/workflows/deploy.yml`)
+   - Staging: Automatic deployment
+   - Production: Requires manual approval
+   - Pre-deployment security verification
+   - Deployment audit trail
 
 ### Setup GitHub Actions
 
 1. Go to **Settings → Secrets and variables → Actions**
 2. Add secrets:
    ```
+   DOCKER_USERNAME=your_docker_username
+   DOCKER_PASSWORD=your_docker_token
    DEPLOY_HOST=your-server-ip
    DEPLOY_USER=deploy_user
    DEPLOY_KEY=<SSH_PRIVATE_KEY>
    DEPLOY_PATH=/home/deploy_user/ollama-mistral
    ```
 
-See `CI_CD_SETUP.md` for detailed instructions.
+See `CI_CD_SETUP.md` for detailed instructions and `DEVSECOPS.md` for security policies.
+
+## Security
+
+### DevSecOps Practices
+
+This project implements enterprise-grade security:
+
+| Layer | Tools | Details |
+|-------|-------|---------|
+| **Dependencies** | Safety, pip-audit | Scans for known vulnerabilities |
+| **Containers** | Trivy | Scans images and filesystem |
+| **Secrets** | TruffleHog | Detects accidentally committed secrets |
+| **Code** | Bandit, flake8 | Security linting and quality checks |
+| **Access** | GitHub Secrets | Encrypted credential management |
+
+### Security Features
+
+- ✓ `.env` files completely excluded from Git
+- ✓ `.dockerignore` excludes development files from production images
+- ✓ Non-root user execution in Docker
+- ✓ Health checks on all containers
+- ✓ Error message sanitization (no data leakage)
+- ✓ Comprehensive logging with sensitive data excluded
+- ✓ Automated security scanning on every push
+- ✓ Production deployment approval gate
+- ✓ GitHub Security dashboard integration
+
+### Security Documentation
+
+- **SECURITY.md** - Vulnerability reporting and security best practices
+- **DEVSECOPS.md** - Comprehensive DevSecOps policy and procedures
+- **SECURITY_SCANNING.md** - Detailed security tool usage guide
+- **CONTRIBUTING.md** - Security guidelines for contributors
 
 ## File Structure
 
@@ -212,20 +359,39 @@ See `CI_CD_SETUP.md` for detailed instructions.
 .
 ├── .env                         # Development environment variables
 ├── .env.production              # Production environment variables
+├── .dockerignore                # Docker build exclusions
 ├── .gitignore                   # Git ignore rules
+├── .gitattributes               # Secure file handling
 ├── Dockerfile                   # Ollama container
 ├── Dockerfile.api               # API server container
 ├── docker-compose.yml           # Development compose
 ├── docker-compose.prod.yml      # Production compose
+├── docker-compose.override.yml  # Local development overrides
 ├── api_server.py                # FastAPI application
-├── test_ollama.py               # Test script
 ├── requirements-api.txt         # Python dependencies
-├── .github/workflows/           # GitHub Actions CI/CD
-│   ├── ci.yml
-│   ├── cd.yml
-│   ├── deploy.yml
-│   └── security.yml
+├── tests/
+│   ├── conftest.py              # pytest configuration & fixtures
+│   ├── test_api.py              # Unit tests (11 tests)
+│   ├── test_ollama_integration.py # Integration test (requires Ollama)
+│   └── __init__.py
+├── .github/
+│   ├── CODEOWNERS               # Code review assignments
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md        # Bug report template
+│   │   ├── feature_request.md   # Feature request template
+│   │   └── pull_request.md      # Pull request template
+│   └── workflows/
+│       ├── ci.yml               # CI pipeline (lint, build, test)
+│       ├── cd.yml               # CD pipeline (build, push)
+│       ├── deploy.yml           # Deployment (staging/production)
+│       └── security.yml         # Security scanning
+├── SECURITY.md                  # Vulnerability reporting policy
+├── DEVSECOPS.md                 # Security practices and procedures
+├── SECURITY_SCANNING.md         # Security tool usage guide
+├── CONTRIBUTING.md              # Contribution guidelines
+├── BRANCH_PROTECTION.md         # Branch protection setup
 ├── CI_CD_SETUP.md               # CI/CD documentation
+├── GIT_WORKFLOW.md              # Git workflow guide
 └── README.md                    # This file
 ```
 
@@ -294,6 +460,25 @@ docker logs ollama-webui
 docker compose restart web-ui
 ```
 
+### Tests Fail Due to Connection Error
+
+If pytest hangs or shows connection errors:
+
+1. Ensure Ollama service is running:
+   ```bash
+   docker compose up -d ollama
+   ```
+
+2. Unit tests should always pass (they use mocks):
+   ```bash
+   pytest tests/test_api.py -v
+   ```
+
+3. Integration test skips automatically if Ollama is unavailable:
+   ```bash
+   pytest tests/test_ollama_integration.py -v
+   ```
+
 ## Production Deployment
 
 ### AWS EC2
@@ -316,13 +501,21 @@ Deploy to any server with:
 - NVIDIA GPU + CUDA drivers
 - SSH access for CI/CD
 
-## Security
+### Deployment Workflow
 
-- ✓ `.env` files excluded from Git (see `.gitignore`)
-- ✓ Health checks on all containers
-- ✓ Logging configured (JSON format)
-- ✓ Non-root user capable
-- ✓ GitHub Actions security scanning
+For production deployments with approval gate:
+
+```bash
+# Trigger production deployment
+gh workflow run deploy.yml \
+  -f environment=production \
+  -f version=v1.0.0
+
+# Check approval status in GitHub Actions
+# Once approved, deployment begins automatically
+```
+
+See `DEVSECOPS.md` for detailed deployment procedures.
 
 ## Monitoring
 
@@ -346,8 +539,11 @@ docker stats
 Pull requests welcome! Please:
 1. Fork the repository
 2. Create a feature branch
-3. Commit changes
-4. Push and create a Pull Request
+3. Run tests: `pytest -v`
+4. Commit changes
+5. Push and create a Pull Request
+
+See `CONTRIBUTING.md` for detailed guidelines and `SECURITY.md` for security requirements.
 
 ## License
 
@@ -357,6 +553,8 @@ MIT License - see LICENSE file for details.
 
 - **Issues**: https://github.com/takashim0101/ollama-mistral/issues
 - **Discussions**: https://github.com/takashim0101/ollama-mistral/discussions
+- **Docker Hub**: https://hub.docker.com/r/takam0101/ollama-api
+- **Security**: See `SECURITY.md` for reporting vulnerabilities
 
 ## References
 
@@ -365,16 +563,35 @@ MIT License - see LICENSE file for details.
 - [FastAPI](https://fastapi.tiangolo.com)
 - [Docker](https://www.docker.com)
 - [GitHub Actions](https://github.com/features/actions)
+- [OWASP Security](https://owasp.org/)
 
-## Roadmap
+## Project Status
 
+### v1.0.0 - Production Ready
+
+**Completed Features** ✓
+- [x] Ollama + Mistral 7B integration with GPU acceleration
+- [x] FastAPI REST API with OpenAPI documentation
+- [x] Docker containerization with non-root users
+- [x] GitHub Actions CI/CD pipeline
+- [x] Automated security scanning (5 layers)
+- [x] Production deployment with approval gate
+- [x] Comprehensive documentation and guides
+- [x] 12 automated tests (unit + integration)
+- [x] Docker Hub image publication
+- [x] Branch protection and code review workflow
+
+**Future Roadmap** 📋
 - [ ] Support for additional models (Llama 2, Neural Chat)
-- [ ] Multi-GPU support
-- [ ] Model quantization optimization
+- [ ] Multi-GPU support and load balancing
+- [ ] Model quantization optimization for faster inference
 - [ ] Kubernetes deployment templates
-- [ ] Prometheus monitoring integration
-- [ ] OpenTelemetry tracing
+- [ ] Prometheus monitoring and metrics export
+- [ ] OpenTelemetry tracing for observability
 - [ ] RAG (Retrieval Augmented Generation) support
+- [ ] Advanced caching strategies for inference
+- [ ] WebSocket support for streaming responses
+- [ ] GraphQL API alternative
 
 ---
 

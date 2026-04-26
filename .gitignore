@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+.env.production
+!.env.example
 
 # Python
 __pycache__/
@@ -52,3 +54,6 @@ docker-compose.override.yml
 # Logs
 *.log
 logs/
+
+# Pytest cache
+.pytest_cache/

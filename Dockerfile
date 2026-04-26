@@ -1,4 +1,4 @@
-FROM ollama/ollama:latest
+FROM ollama/ollama:0.1.32
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

@@ -1,0 +1,20 @@
+# Code Owners
+
+# These owners will be requested for review when someone opens a pull request.
+* @takashim0101
+
+# Documentation
+*.md @takashim0101
+
+# CI/CD workflows
+.github/workflows/ @takashim0101
+
+# Docker configuration
+Dockerfile* @takashim0101
+docker-compose*.yml @takashim0101
+
+# API server code
+api_server.py @takashim0101
+
+# Tests
+tests/ @takashim0101

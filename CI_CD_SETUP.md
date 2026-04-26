@@ -1,41 +1,42 @@
 # GitHub Actions CI/CD Setup Guide
 
-## CI/CD パイプライン
+## CI/CD Pipeline
 
 ### 1. CI - Build and Test (`ci.yml`)
-- コミット/PR 時に実行
-- Python 依存関係のインストール
-- Linting（flake8）
-- Docker イメージのビルド
-- Docker Compose で起動
-- API エンドポイントのテスト
+- Runs on commit/PR
+- Installs Python dependencies
+- Linting (flake8)
+- Runs pytest (unit tests + integration tests)
+- Builds Docker image
+- Starts with Docker Compose
+- Tests API endpoints
 
-**トリガー:**
-- `main` ブランチへの push
-- `develop` ブランチへの push
-- PR 作成
+**Triggers:**
+- Push to `main` branch
+- Push to `develop` branch
+- PR creation
 
 ### 2. CD - Build and Push (`cd.yml`)
-- Docker イメージをビルド
-- GitHub Container Registry（ghcr.io）へプッシュ
-- Docker Hub へもプッシュ（オプション）
+- Builds Docker image
+- Pushes to GitHub Container Registry (ghcr.io)
+- Pushes to Docker Hub (optional)
 
-**トリガー:**
-- `main` ブランチへの push
-- タグ作成時（v1.0.0 など）
+**Triggers:**
+- Push to `main` branch
+- On tag creation (e.g., v1.0.0)
 
 ### 3. Deploy - Production (`deploy.yml`)
-- CD 完了後に本番サーバーにデプロイ
-- SSH で本番マシンに接続
-- Docker Compose で起動
-- Slack 通知
+- Deploys to production server after CD completes
+- Connects to production machine via SSH
+- Starts with Docker Compose
+- Sends Slack notification
 
-**トリガー:**
-- CD ワークフロー完了時
+**Triggers:**
+- On completion of CD workflow
 
-## セットアップ手順
+## Setup Steps
 
-### Step 1: GitHub リポジトリを作成
+### Step 1: Create a GitHub Repository
 
 ```bash
 git init
@@ -46,114 +47,223 @@ git commit -m "Initial commit: Ollama + Mistral 7B setup"
 git push -u origin main
 ```
 
-### Step 2: GitHub Secrets を設定
+### Step 2: Configure GitHub Secrets
 
-リポジトリの `Settings → Secrets and variables → Actions` で以下を追加：
+In your repository's `Settings → Secrets and variables → Actions`, add the following:
 
-#### Docker Hub（オプション）
+#### Docker Hub (Optional)
 ```
 DOCKER_USERNAME = your_docker_username
 DOCKER_PASSWORD = your_docker_token
 ```
 
-#### 本番デプロイ用
+#### For Production Deployment
 ```
 DEPLOY_HOST = your-server-ip-or-domain.com
 DEPLOY_USER = deploy_user
-DEPLOY_KEY = (SSH 秘密鍵)
+DEPLOY_KEY = (SSH private key)
 DEPLOY_PATH = /home/deploy_user/ollama-mistral
 ```
 
-#### Slack 通知（オプション）
+#### Slack Notification (Optional)
 ```
 SLACK_WEBHOOK_URL = https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
-### Step 3: SSH キーペアを生成（本番デプロイ用）
+### Step 3: Generate SSH Key Pair (for Production Deployment)
 
 ```bash
 ssh-keygen -t ed25519 -f deploy_key -N ""
 ```
 
-- `deploy_key` — GitHub Secrets に `DEPLOY_KEY` として登録
-- `deploy_key.pub` — 本番サーバーの `~/.ssh/authorized_keys` に追加
+- `deploy_key` — Register as `DEPLOY_KEY` in GitHub Secrets
+- `deploy_key.pub` — Add to `~/.ssh/authorized_keys` on the production server
 
-### Step 4: 本番サーバーの準備
+### Step 4: Prepare the Production Server
 
 ```bash
-# 本番サーバー
+# On the production server
 mkdir -p /home/deploy_user/ollama-mistral
 cd /home/deploy_user/ollama-mistral
 
-# Docker, Docker Compose がインストール済みか確認
+# Check if Docker and Docker Compose are installed
 docker --version
 docker compose --version
 
-# Git リポジトリ初期化
+# Initialize Git repository
 git clone https://github.com/YOUR_USERNAME/ollama-mistral.git .
 cp .env.production .env
 ```
 
-## ワークフロー実行フロー
+## Testing in CI/CD
 
-```
-1. コミット push
-   ↓
-2. GitHub Actions CI 実行
-   - テスト ✓
-   - ビルド ✓
-   ↓
-3. CD ワークフロー実行
-   - Docker イメージをビルド
-   - ghcr.io へプッシュ ✓
-   ↓
-4. Deploy ワークフロー実行
-   - 本番サーバーに SSH 接続
-   - git pull
-   - docker compose 更新
-   - コンテナ再起動 ✓
-   ↓
-5. Slack 通知（デプロイ完了）
-```
+The CI pipeline automatically runs all tests:
 
-## GitHub Actions ステータス確認
-
-リポジトリの `Actions` タブで以下が表示されます：
-
-- ✓ CI パイプラインの実行状況
-- ✓ テスト結果
-- ✓ ビルド状況
-- ✓ デプロイ履歴
-
-## トラブルシューティング
-
-### CI が失敗する場合
 ```bash
-# ローカルでテスト
-docker compose up -d --wait
-curl http://localhost:8000/health
+pytest -v
 ```
 
-### CD が失敗する場合
-- Secrets が正しく設定されているか確認
-- Docker Hub クレデンシャルが正しいか確認
+This includes:
+- **11 unit tests** from `tests/test_api.py` — Always run, use mocking
+- **1 integration test** from `tests/test_ollama_integration.py` — Skipped if Ollama unavailable
 
-### Deploy が失敗する場合
-- SSH キーが正しく設定されているか確認
-- 本番サーバーが起動しているか確認
-- `DEPLOY_PATH` が存在するか確認
+If you want to skip integration tests in CI (recommended for faster builds), update your CI workflow:
 
-## 本番環境チェックリスト
+```yaml
+- name: Run tests
+  run: pytest tests/test_api.py -v
+```
 
-- [ ] SSH キーペアを生成
-- [ ] GitHub Secrets を設定
-- [ ] 本番サーバーに SSH アクセス確認
-- [ ] Docker Compose が本番にインストール済み
-- [ ] `.env.production` を本番サーバーにコピー
-- [ ] ファイアウォール設定（ポート公開）
+## Workflow Execution Flow
 
-## 参考
+```
+1. Commit push
+   ↓
+2. GitHub Actions CI runs
+   - Installs dependencies
+   - Runs linting (flake8)
+   - Runs pytest (unit + integration tests)
+   - Build ✓
+   ↓
+3. CD workflow runs
+   - Builds Docker image
+   - Pushes to ghcr.io ✓
+   ↓
+4. Deploy workflow runs
+   - SSH into production server
+   - git pull
+   - docker compose pull && docker compose up -d
+   - Restart containers ✓
+   ↓
+5. Slack notification (deployment complete)
+```
 
-- [GitHub Actions ドキュメント](https://docs.github.com/ja/actions)
+## Checking GitHub Actions Status
+
+In your repository's `Actions` tab, you will see:
+
+- ✓ CI pipeline execution status
+- ✓ Test results
+- ✓ Build status
+- ✓ Deployment history
+
+## Troubleshooting
+
+### If CI fails
+```bash
+# Test locally
+python -m venv venv
+source venv/bin/activate  # or .\venv\Scripts\Activate.ps1 on Windows
+pip install -r requirements-api.txt
+pytest -v
+```
+
+### If tests timeout
+- Unit tests should complete in <10s
+- Integration tests may timeout if Ollama isn't running
+- Check that Ollama container is healthy in the CI environment
+
+### If CD fails
+- Check if Secrets are configured correctly
+- Check if Docker Hub credentials are correct
+- Verify Docker image builds locally: `docker build -f Dockerfile.api -t ollama-api .`
+
+### If Deploy fails
+- Check if SSH key is configured correctly
+- Check if the production server is running
+- Check if `DEPLOY_PATH` exists and is accessible
+- Verify SSH connectivity: `ssh -i deploy_key deploy_user@DEPLOY_HOST`
+
+## Production Environment Checklist
+
+- [ ] Generate SSH key pair
+- [ ] Configure GitHub Secrets
+- [ ] Confirm SSH access to the production server
+- [ ] Docker Compose is installed on production
+- [ ] Copy `.env.production` to the production server
+- [ ] Configure firewall (port exposure)
+- [ ] Verify Docker Hub credentials (if pushing there)
+- [ ] Test CI/CD pipeline with a dummy commit
+
+## Docker Image Versioning
+
+For better image management, tag your builds:
+
+```yaml
+# In cd.yml workflow
+- name: Build and push
+  uses: docker/build-push-action@v5
+  with:
+    tags: |
+      docker.io/YOUR_USERNAME/ollama-api:latest
+      docker.io/YOUR_USERNAME/ollama-api:${{ github.sha }}
+      docker.io/YOUR_USERNAME/ollama-api:${{ github.ref_name }}
+```
+
+This allows you to:
+- Always have a `latest` tag
+- Track specific commits with SHA tags
+- Use version tags (v1.0.0)
+
+## Production Deployment Approval
+
+### Deployment with Approval Gate
+
+Production deployments require manual approval via GitHub Environments:
+
+```bash
+# Trigger production deployment
+gh workflow run deploy.yml \
+  -f environment=production \
+  -f version=v1.0.0
+```
+
+The workflow will:
+1. **Pre-deployment checks** - Verify all tests pass and security scans are clean
+2. **Request approval** - GitHub notifies reviewers
+3. **Await approval** - Blocks until manually approved
+4. **Deploy** - Pushes image and deploys to production
+5. **Verify** - Runs health checks
+
+### Staging Deployment (Automatic)
+
+Staging deployments require no approval:
+
+```bash
+gh workflow run deploy.yml \
+  -f environment=staging \
+  -f version=main
+```
+
+Deploys immediately after pre-deployment checks pass.
+
+### Environment Configuration
+
+Configure approval reviewers in GitHub:
+
+1. Go to **Settings → Environments → production-approval**
+2. Under "Deployment branches", select which branches can deploy
+3. Under "Deployment protection rules**, add required reviewers
+4. Set timeout (default: 30 days)
+
+## Security Integration
+
+The deployment workflow integrates with security scanning:
+
+- ✓ Fails if dependency vulnerabilities found (Safety + pip-audit)
+- ✓ Fails if container vulnerabilities found (Trivy)
+- ✓ Fails if secrets detected in codebase (TruffleHog)
+- ✓ Fails if code security issues found (Bandit)
+- ✓ Requires signed commits (recommended)
+
+All security scans must pass before approval is even requested.
+
+## References
+
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
 - [Docker setup-buildx-action](https://github.com/docker/setup-buildx-action)
-- [GitHub Container Registry](https://docs.github.com/ja/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+- [Docker Hub](https://docs.docker.com/docker-hub/)
+- [DEVSECOPS.md](./DEVSECOPS.md) - Detailed security policy
+
