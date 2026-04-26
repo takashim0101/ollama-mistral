@@ -116,9 +116,9 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: ${{ github.event.repository.default_branch || 'main' }}
-        head: HEAD
-        # Removed --fail as the action automatically fails on secrets
+        # Dynamically switch comparison target between PR base and previous push commit
+        base: ${{ github.event.pull_request.base.sha || github.event.before }}
+        head: ${{ github.event.pull_request.head.sha || github.event.after }}
         extra_args: --only-verified
 
   code-quality:
