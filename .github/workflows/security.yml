@@ -43,7 +43,9 @@ jobs:
     - name: Check for vulnerabilities with pip-audit
       run: |
         echo "Checking dependencies with pip-audit..."
-        pip-audit --desc || PIP_AUDIT_EXIT=$?
+        # Temporarily ignoring CVE-2026-3219 as the upstream pip upgrade does not resolve it yet.
+        # TODO: Remove --ignore-vuln once a fully patched pip version is available in the runner environment.
+        pip-audit --desc --ignore-vuln CVE-2026-3219 || PIP_AUDIT_EXIT=$?
         if [ ! -z "$PIP_AUDIT_EXIT" ] && [ "$PIP_AUDIT_EXIT" -ne 0 ]; then
           echo "❌ pip-audit found vulnerabilities!"
           exit 1
