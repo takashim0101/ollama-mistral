@@ -2,7 +2,6 @@ services:
   ollama:
     build: .
     container_name: ollama-mistral
-    runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
       - OLLAMA_HOST=${OLLAMA_HOST}
